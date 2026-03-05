@@ -851,5 +851,9 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
 app.job_queue.run_daily(check_autopay, time=time(hour=0, minute=1))
 
-print("Bot running...")
-app.run_polling()
+async def main():
+    print("Bot running...")
+    await app.run_polling()
+
+if __name__ == "__main__":
+    asyncio.run(main())
