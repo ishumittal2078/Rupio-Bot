@@ -1,3 +1,4 @@
+import asyncio
 import os
 import sqlite3
 import matplotlib.pyplot as plt
@@ -851,4 +852,4 @@ app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
 app.job_queue.run_daily(check_autopay, time=time(hour=0, minute=1))
 
 print("Bot running...")
-app.run_polling()
+asyncio.run(app.run_polling())
