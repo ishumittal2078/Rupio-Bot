@@ -1,6 +1,6 @@
 import asyncio
 import os
-import sqlite3
+import psycopg2
 import matplotlib.pyplot as plt
 from flask import Flask
 import threading
@@ -13,7 +13,7 @@ from telegram import ReplyKeyboardMarkup
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
-conn = sqlite3.connect("expenses.db", check_same_thread=False)
+conn = psycopg2.connect(os.getenv("DATABASE_URL"))
 cursor = conn.cursor()
 
 app_web = Flask(__name__)
@@ -24,7 +24,7 @@ def home():
 # EXPENSES TABLE (YOU FORGOT THIS)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS expenses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     type TEXT,
     amount REAL,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS users (
 """)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS debts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     from_user INTEGER,
     to_user INTEGER,
     amount REAL,
@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS debts (
 """)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS recurring (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     type TEXT,
     amount REAL,
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS goals (
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS lending (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     user_id INTEGER,
     person TEXT,
     type TEXT,
@@ -98,7 +98,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         INSERT OR IGNORE INTO users (user_id, username, first_name)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
     """, (user.id, user.username, user.first_name))
 
     conn.commit()
@@ -132,7 +132,7 @@ async def lend_money(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         cursor.execute("""
             INSERT INTO lending (user_id, person, type, amount, date, note)
-            VALUES (?, ?, 'lent', ?, ?, ?)
+            VALUES (%s, %s, 'lent', %s, %s, %s)
         """, (user_id, person, amount, date, note))
 
         conn.commit()
@@ -158,7 +158,7 @@ async def split_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
             username = username.replace("@", "")
 
             cursor.execute(
-                "SELECT user_id FROM users WHERE username=?",
+                "SELECT user_id FROM users WHERE username=%s",
                 (username,)
             )
             user = cursor.fetchone()
@@ -168,7 +168,7 @@ async def split_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 cursor.execute("""
                     INSERT INTO debts (from_user, to_user, amount, description, date)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s)
                 """, (debtor_id, payer_id, share, description, date))
 
                 # Notify debtor
