@@ -2,6 +2,8 @@ import asyncio
 import os
 import sqlite3
 import matplotlib.pyplot as plt
+from flask import Flask
+import threading
 from datetime import datetime
 from datetime import time
 from telegram import Update
@@ -14,6 +16,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 conn = sqlite3.connect("expenses.db", check_same_thread=False)
 cursor = conn.cursor()
 
+app_web = Flask(__name__)
+
+@app_web.route("/")
+def home():
+    return "Bot is running!"
 # EXPENSES TABLE (YOU FORGOT THIS)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS expenses (
@@ -851,7 +858,11 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
 app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
 app.job_queue.run_daily(check_autopay, time=time(hour=0, minute=1))
 
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host="0.0.0.0", port=port)
 
+threading.Thread(target=run_web).start()
 print("Bot running...")
 
 loop = asyncio.new_event_loop()
