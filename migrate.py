@@ -6,7 +6,7 @@ sqlite_conn = sqlite3.connect("expenses.db")
 sqlite_cursor = sqlite_conn.cursor()
 
 # PostgreSQL
-pg_conn = psycopg2.connect("YOUR_DATABASE_URL")
+pg_conn = psycopg2.connect("DATABASE_URL")
 pg_cursor = pg_conn.cursor()
 
 tables = ["expenses", "recurring", "goals", "lending", "autopay_log"]
