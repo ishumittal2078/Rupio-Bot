@@ -195,7 +195,7 @@ async def lend_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SELECT person,
         SUM(CASE WHEN type='lent' THEN amount ELSE -amount END)
         FROM lending
-        WHERE user_id=?
+        WHERE user_id=%s
         GROUP BY person
     """, (user_id,))
 
@@ -219,7 +219,7 @@ async def lend_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("""
         SELECT type, amount, date, note
         FROM lending
-        WHERE user_id=? AND person=?
+        WHERE user_id=%s AND person=%s
         ORDER BY date DESC
     """, (user_id, person))
 
@@ -254,7 +254,7 @@ async def received_money(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         cursor.execute("""
             INSERT INTO lending (user_id, person, type, amount, date, note)
-            VALUES (?, ?, 'received', ?, ?, ?)
+            VALUES (%s, %s, 'received', %s, %s, %s)
         """, (user_id, person, amount, date, note))
 
         conn.commit()
@@ -361,7 +361,7 @@ async def check_autopay(context: ContextTypes.DEFAULT_TYPE):
     month_str = today.strftime("%Y-%m")
     date_str = today.strftime("%Y-%m-%d")
 
-    cursor.execute("SELECT * FROM recurring WHERE day=?", (day_today,))
+    cursor.execute("SELECT * FROM recurring WHERE day=%s", (day_today,))
     recurring_data = cursor.fetchall()
 
     for row in recurring_data:
@@ -376,7 +376,7 @@ async def check_autopay(context: ContextTypes.DEFAULT_TYPE):
         # Check if already executed this month
         cursor.execute("""
             SELECT * FROM autopay_log
-            WHERE recurring_id=? AND month=?
+            WHERE recurring_id=%s AND month=%s
         """, (recurring_id, month_str))
 
         if cursor.fetchone():
@@ -385,13 +385,13 @@ async def check_autopay(context: ContextTypes.DEFAULT_TYPE):
         # Insert expense/income
         cursor.execute("""
             INSERT INTO expenses (user_id, type, amount, category, account, description, date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (user_id, pay_type, amount, category, account, description, date_str))
 
         # Log execution
         cursor.execute("""
             INSERT INTO autopay_log (user_id, recurring_id, month)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (user_id, recurring_id, month_str))
 
         conn.commit()
@@ -408,7 +408,7 @@ async def account_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SELECT account,
         SUM(CASE WHEN type='income' THEN amount ELSE -amount END)
         FROM expenses
-        WHERE user_id=?
+        WHERE user_id=%s
         GROUP BY account
     """, (user_id,))
 
@@ -429,7 +429,7 @@ async def list_autopay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("""
         SELECT id, type, amount, category, day
         FROM recurring
-        WHERE user_id=?
+        WHERE user_id=%s
     """, (update.effective_user.id,))
 
     data = cursor.fetchall()
@@ -449,7 +449,7 @@ async def delete_autopay(update: Update, context: ContextTypes.DEFAULT_TYPE):
         rid = int(context.args[0])
         cursor.execute("""
             DELETE FROM recurring
-            WHERE id=? AND user_id=?
+            WHERE id=%s AND user_id=%s
         """, (rid, update.effective_user.id))
         conn.commit()
 
@@ -492,7 +492,7 @@ async def add_autopay(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         cursor.execute("""
             INSERT INTO recurring (user_id, type, amount, category, account, description, day)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """, (user_id, pay_type, amount, category, account, description, day))
 
         conn.commit()
@@ -512,8 +512,8 @@ async def add_autopay(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def set_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         target = float(context.args[0])
-        cursor.execute("DELETE FROM goals WHERE user_id=?", (update.effective_user.id,))
-        cursor.execute("INSERT INTO goals VALUES (?, ?)", (update.effective_user.id, target))
+        cursor.execute("DELETE FROM goals WHERE user_id=%s", (update.effective_user.id,))
+        cursor.execute("INSERT INTO goals VALUES (%s, %s)", (update.effective_user.id, target))
         conn.commit()
         await update.message.reply_text(f"🎯 Savings goal set to ₹{target}")
     except:
@@ -522,7 +522,7 @@ async def set_goal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def goal_progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
-    cursor.execute("SELECT target FROM goals WHERE user_id=?", (user_id,))
+    cursor.execute("SELECT target FROM goals WHERE user_id=%s", (user_id,))
     goal = cursor.fetchone()
 
     if not goal:
@@ -533,7 +533,7 @@ async def goal_progress(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         SELECT SUM(CASE WHEN type='income' THEN amount ELSE -amount END)
-        FROM expenses WHERE user_id=?
+        FROM expenses WHERE user_id=%s
     """, (user_id,))
 
     balance = cursor.fetchone()[0] or 0
@@ -551,7 +551,7 @@ async def chart_report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("""
         SELECT category, SUM(amount)
         FROM expenses
-        WHERE user_id=? AND type='expense' AND date LIKE ?
+        WHERE user_id=%s AND type='expense' AND date LIKE %s
         GROUP BY category
     """, (user_id, f"{month}%"))
 
@@ -579,7 +579,7 @@ async def monthly_pdf(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cursor.execute("""
         SELECT type, amount, category, date
         FROM expenses
-        WHERE user_id=? AND date LIKE ?
+        WHERE user_id=%s AND date LIKE %s
     """, (user_id, f"{month}%"))
 
     data = cursor.fetchall()
@@ -620,7 +620,7 @@ async def add_expense(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         cursor.execute("""
             INSERT INTO expenses (user_id, type, amount, category, account, description, date)
-            VALUES (?, 'expense', ?, ?, ?, ?, ?)
+            VALUES (%s, 'expense', %s, %s, %s, %s, %s)
         """, (user_id, amount, category, account, description, date))
 
         conn.commit()
@@ -640,7 +640,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         SELECT type, SUM(amount) FROM expenses
-        WHERE user_id=? AND date LIKE ?
+        WHERE user_id=%s AND date LIKE %s
         GROUP BY type
     """, (user_id, f"{month}%"))
 
@@ -673,7 +673,7 @@ async def accounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         SELECT account, SUM(amount) FROM expenses
-        WHERE user_id=? AND date LIKE ?
+        WHERE user_id=%s AND date LIKE %s
         GROUP BY account
     """, (user_id, f"{month}%"))
 
@@ -696,7 +696,7 @@ async def categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         SELECT category, SUM(amount) FROM expenses
-        WHERE user_id=? AND date LIKE ?
+        WHERE user_id=%s AND date LIKE %s
         GROUP BY category
     """, (user_id, f"{month}%"))
 
@@ -719,7 +719,7 @@ async def history(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     cursor.execute("""
         SELECT id, amount, category, account, description, date FROM expenses
-        WHERE user_id=? AND date LIKE ?
+        WHERE user_id=%s AND date LIKE %s
         ORDER BY date DESC
     """, (user_id, f"{month}%"))
 
@@ -742,7 +742,7 @@ async def delete(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
         cursor.execute("""
-            DELETE FROM expenses WHERE id=? AND user_id=?
+            DELETE FROM expenses WHERE id=%s AND user_id=%s
         """, (expense_id, user_id))
         conn.commit()
 
@@ -759,7 +759,7 @@ async def my_debts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SELECT users.first_name, SUM(amount)
         FROM debts
         JOIN users ON debts.to_user = users.user_id
-        WHERE from_user=?
+        WHERE from_user=%s
         GROUP BY to_user
     """, (user_id,))
 
@@ -770,7 +770,7 @@ async def my_debts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SELECT users.first_name, SUM(amount)
         FROM debts
         JOIN users ON debts.from_user = users.user_id
-        WHERE to_user=?
+        WHERE to_user=%s
         GROUP BY from_user
     """, (user_id,))
 
@@ -810,7 +810,7 @@ async def add_income(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         cursor.execute("""
             INSERT INTO expenses (user_id, type, amount, category, account, description, date)
-            VALUES (?, 'income', ?, ?, ?, ?, ?)
+            VALUES (%s, 'income', %s, %s, %s, %s, %s)
         """, (user_id, amount, category, account, description, date))
 
         conn.commit()
