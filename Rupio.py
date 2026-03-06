@@ -97,8 +97,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
 
     cursor.execute("""
-        INSERT OR IGNORE INTO users (user_id, username, first_name)
+        INSERT INTO users (user_id, username, first_name)
         VALUES (%s, %s, %s)
+        ON CONFLICT (user_id) DO NOTHING
     """, (user.id, user.username, user.first_name))
 
     conn.commit()
@@ -107,7 +108,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "💼 Welcome to Expense Tracker\n\nChoose an option:",
         reply_markup=main_menu()
     )
-
 def main_menu():
     keyboard = [
         ["➕ Add Expense", "💰 Add Income"],
