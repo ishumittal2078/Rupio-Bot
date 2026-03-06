@@ -93,21 +93,21 @@ CREATE TABLE IF NOT EXISTS autopay_log (
 
 conn.commit()
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update, context):
     user = update.effective_user
 
-    cursor.execute("""
+    try:
+        cursor.execute("""
         INSERT INTO users (user_id, username, first_name)
         VALUES (%s, %s, %s)
         ON CONFLICT (user_id) DO NOTHING
-    """, (user.id, user.username, user.first_name))
+        """, (user.id, user.username, user.first_name))
 
-    conn.commit()
+        conn.commit()
 
-    await update.message.reply_text(
-        "💼 Welcome to Expense Tracker\n\nChoose an option:",
-        reply_markup=main_menu()
-    )
+    except Exception as e:
+        conn.rollback()
+        print("Database error:", e)
 def main_menu():
     keyboard = [
         ["➕ Add Expense", "💰 Add Income"],
